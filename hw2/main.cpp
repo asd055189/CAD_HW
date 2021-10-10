@@ -1,104 +1,10 @@
 #include <bits/stdc++.h>
+#include "Node.h"
+#include "MLRCS.h"
+
 using namespace std;
 
-
-class Node{
-    public:
-        Node(string n){
-            name=n;
-            priority=-1;
-            op=0;
-            state=-1;
-        };
-        ~Node(){};
-
-        void setop(int n){
-            op=n;
-        };
-        void setpre(Node*_in);
-        void setnext(Node*_out);
-        void outpre();
-        void outnxt();
-        vector<Node *>getparent(){return parent;};
-        vector<Node *>getchild(){return child;};
-        string getname(){return name;}
-    private:
-        int state;//-1:unready 0:ready 1:done 
-        int priority;
-        int op;//0:None 1:and 2:or 3:not
-        string name;
-        vector<Node *>parent;
-        vector<Node *>child;
-};
-class ML_RCS{
-    public:
-        ML_RCS(map<string,Node*>graph,vector<int>A){
-            limit_and=A[0];
-            limit_or=A[1];
-            limit_not=A[2];
-            start=new Node("__start__");
-            end=new Node("__end__");
-
-            vector<Node*>start_node;
-            vector<Node*>end_node;
-            for(auto i:graph){
-                if(i.second->getparent().size()==0)
-                    start_node.push_back(i.second);
-                if(i.second->getchild().size()==0)
-                    end_node.push_back(i.second);
-            }
-            for (int i=0;i<start_node.size();i++)
-                start->setnext(start_node[i]);
-            for (int i=0;i<end_node.size();i++)
-                end->setpre(end_node[i]);
-
-            /*debug the start/end point
-            start->outnxt();
-            end->outpre();
-            */
-
-        };
-        ~ML_RCS(){};
-    private:
-        int limit_and;
-        int limit_or;
-        int limit_not;
-        Node *start;
-        Node *end;
-};
-void Node::setpre(Node* _in){
-    parent.push_back(_in);
-}
-void Node::setnext(Node* _out){
-    child.push_back(_out);
-}
-void Node::outpre(){
-    cout <<"predecessor: ";
-    if(parent.size()==0){
-        cout <<"- "<<endl;
-        return;
-    }
-    for(auto i:parent){
-        cout <<i->getname();
-        if(i->name!=parent[parent.size()-1]->getname())
-            cout <<", ";
-    }
-    cout <<"\b\b"<<endl;
-}
-void Node::outnxt(){
-    cout <<"successor: ";
-    if(child.size()==0){
-        cout <<"- "<<endl;
-        return;
-    }
-    for(auto i:child){
-        cout <<i->getname();
-        if(i->name!=child[child.size()-1]->getname())
-            cout <<", ";
-    }
-    cout <<"\b\b"<<endl;
-}
-
+void travesal(Node *n);
 int main(int argc, char *argv[]){
     map<string,Node*>list;
     int mode=0;
@@ -117,8 +23,6 @@ int main(int argc, char *argv[]){
         exit(0);
     }
 	ifstream infile(argv[2],ifstream::in);
-	//ofstream outfile("function.out",ifstream::out);
-    //outfile << "Node function:"<<endl;
 	string token;
     if(!infile){
         cout<<"file error\n";
@@ -185,7 +89,7 @@ int main(int argc, char *argv[]){
                     break;
                 if (exp!=""){
                     exp+=" +";
-                    list[(*variables.rbegin())]->setop(2);
+                    list[(*variables.rbegin())]->setop(1);
                 }
                 string table=token;
                 infile>>token;
@@ -194,20 +98,56 @@ int main(int argc, char *argv[]){
                     if(table[i]=='1'){
                         exp+=" "+variables[i];
                         if(table[i+1]=='1')
-                            list[(*variables.rbegin())]->setop(1);
+                            list[(*variables.rbegin())]->setop(0);
                     }
                     else if(table[i]=='0'){
                         exp+=" "+variables[i]+"\'";
-                        list[(*variables.rbegin())]->setop(3);
+                        list[(*variables.rbegin())]->setop(2);
                     }
                 }
             }
             //outfile <<*variables.rbegin()<<" ="<<exp<<endl;
         }
 	}
-    //outfile << "END"<<endl;
     infile.close();
-    //outfile.close();
+
+    Node *start;
+    Node *end;
+    start=new Node("__start__");
+    end=new Node("__end__");
+    vector<Node*>start_node;
+    vector<Node*>end_node;
+    for(auto i:list){
+        if(i.second->getparent().size()==0)
+            start_node.push_back(i.second);
+        if(i.second->getchild().size()==0)
+            end_node.push_back(i.second);
+    }
+    for (int i=0;i<start_node.size();i++){
+        start_node[i]->setpre(start);
+        start->setnext(start_node[i]);
+    }
+    for (int i=0;i<end_node.size();i++){
+        end->setpre(end_node[i]);
+        end_node[i]->setnext(end);
+    }
+
+    queue<Node *>q;
+    q.push(end);
+    while(!q.empty()){
+        for(int i=0;i<q.front()->getparent().size();i++){
+            int p=-1;
+            for (auto j:q.front()->getparent()[i]->getchild()){
+                if(j->getpriority()>p)
+                    p=j->getpriority();
+            }
+            q.front()->getparent()[i]->setpriority(p+1);
+            q.push(q.front()->getparent()[i]);
+        }
+        q.pop();
+
+    }
+    //travesal(start);
     if(mode==1){//MR_LCS
         
     }
@@ -216,8 +156,17 @@ int main(int argc, char *argv[]){
         a.push_back(stoi(string(argv[3])));
         a.push_back(stoi(string(argv[4])));
         a.push_back(stoi(string(argv[5])));
-        ML_RCS run(list,a);
-        int k=0;
+        ML_RCS ml_rcs(start,list,a);
+        ml_rcs.run();
+        //travesal(start);
+        //int k=0;
     }
 
+}
+void travesal(Node *n){
+    if(n->getchild().size()==0)
+        return;
+    cout <<n->getname()<<" "<<n->getpriority()<<" "<<n->getstate()<<endl;
+    for (int i=0;i<n->getchild().size();i++)
+        travesal(n->getchild()[i]);
 }
