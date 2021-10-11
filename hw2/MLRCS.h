@@ -15,6 +15,7 @@ class ML_RCS{
         ~ML_RCS(){};
         void run();
         void checkstate();
+        void checkfeasible();
     private:
         Node* root;
         map<string,Node*>list;
@@ -59,12 +60,41 @@ void ML_RCS::checkstate(){
         }
     }    
 }
+void ML_RCS::checkfeasible(){
+    if(limit_op[0]==0){
+        for(auto i:list){
+            if(i.second->getop()==0){
+                cout <<"No feasible solution.\nEND";
+                exit(0);
+            }
+        }
+    }
+    if(limit_op[1]==0){
+        for(auto i:list){
+            if(i.second->getop()==1){
+                cout <<"No feasible solution.\nEND";
+                exit(0);
+            }
+        }
+    }
+    if(limit_op[2]==0){
+        for(auto i:list){
+            if(i.second->getop()==2){
+                cout <<"No feasible solution.\nEND";
+                exit(0);
+            }
+        }
+    }
+}
+
 void ML_RCS::run(){
     int iteration=1;
     for(int i=0;i<root->getchild().size();i++){
         root->getchild()[i]->setstate(1);
     }
     checkstate();
+    checkfeasible();
+    int M_a=0,M_o=0,M_n=0;
     while(ready_arr.size()!=0){
         cout <<iteration<<": ";
         for (int i=0;i<3;i++){
@@ -82,14 +112,20 @@ void ML_RCS::run(){
                 }
             }
             cout <<"} ";
+            if(i==0)
+                if(usage_op>M_a)M_a=usage_op;
+            if(i==1)
+                if(usage_op>M_o)M_o=usage_op;
+            if(i==2)
+                if(usage_op>M_n)M_n=usage_op;
         }
         cout <<endl;
         checkstate();
         iteration++;
     }
-    cout <<"#AND: "<<limit_op[0]<<endl;
-    cout <<"#OR: "<<limit_op[1]<<endl;
-    cout <<"#NOT: "<<limit_op[2]<<endl;
+    cout <<"#AND: "<<M_a<<endl;
+    cout <<"#OR: "<<M_o<<endl;
+    cout <<"#NOT: "<<M_n<<endl;
     cout<<"END"<<endl;
 
 }
