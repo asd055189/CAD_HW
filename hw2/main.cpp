@@ -1,6 +1,8 @@
 #include <bits/stdc++.h>
 #include "Node.h"
 #include "MLRCS.h"
+#include "MRLCS.h"
+
 
 using namespace std;
 
@@ -145,18 +147,22 @@ int main(int argc, char *argv[]){
             q.push(q.front()->getparent()[i]);
         }
         q.pop();
-
     }
     //travesal(start);
     if(mode==1){//MR_LCS
-        
+        int L=stoi(string(argv[3]));
+        MR_LCS mr_lcs(start,list,L);
+        mr_lcs.checkfeasible();
+        mr_lcs.run();
     }
     if(mode==2){//ML_RCS
         vector<int> a;
+
         a.push_back(stoi(string(argv[3])));
         a.push_back(stoi(string(argv[4])));
         a.push_back(stoi(string(argv[5])));
         ML_RCS ml_rcs(start,list,a);
+        ml_rcs.checkfeasible();
         ml_rcs.run();
         //travesal(start);
         //int k=0;
