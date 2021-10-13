@@ -70,7 +70,7 @@ void MR_LCS::checkfeasible(){
 void MR_LCS::run(){
     int iteration=1;
     checkstate();
-    int M_op[3]={1,1,1};
+    int M_op[3]={0,0,0};
     while(ready_arr.size()!=0){
         cout <<iteration<<": ";
         for (int i=0;i<3;i++){
@@ -78,7 +78,10 @@ void MR_LCS::run(){
             cout <<"{";
             bool temp=false;
             for (auto j:ready_arr){
-                if(j->getop()==i && limit_time-j->getpriority()-iteration<0){
+                if(j->getop()==i){
+                if(M_op[j->getop()]==0)
+                    M_op[i]++;
+                if( limit_time-j->getpriority()-iteration<0){
                     list[j->getname()]->setstate(1);
                     if(temp)
                         cout<<" ";
@@ -86,7 +89,7 @@ void MR_LCS::run(){
                     cout<<j->getname();
                     usage_op++;
                 }
-                else if(j->getop()==i && usage_op<M_op[i]){
+                else if( usage_op<M_op[i]){
                     list[j->getname()]->setstate(1);
                     if(temp)
                         cout<<" ";
@@ -95,6 +98,7 @@ void MR_LCS::run(){
                     usage_op++;
                 }
                 if(usage_op>M_op[i])M_op[i]=usage_op;
+                }
             }
             cout <<"} ";
             

@@ -1,0 +1,25 @@
+.model test
+.input a
+.output z l
+.names a c
+0 1
+.names a b
+0 1
+.names b d e
+11 1
+.names b h m
+11 1
+.names b n o
+11 1
+.names b p q
+11 1
+.names b f g
+11 1
+.names c i
+0 1
+.names i j
+0 1
+.names j k
+0 1
+.names k l
+0 1
