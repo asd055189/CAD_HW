@@ -1,9 +1,7 @@
 #include <bits/stdc++.h>
 #include "Node.h"
 
-#include "MRLCS.h"
-
-
+#include "FDLCS.h"
 using namespace std;
 
 void travesal(Node *n);
@@ -127,18 +125,41 @@ int main(int argc, char *argv[]){
         for(int i=0;i<q.front()->getparent().size();i++){
             int p=-1;
             for (auto j:q.front()->getparent()[i]->getchild()){
-                if(j->getpriority()>p)
-                    p=j->getpriority();
+                if(j->getALAP()>p)
+                    p=j->getALAP();
             }
-            q.front()->getparent()[i]->setpriority(p+1);
+            q.front()->getparent()[i]->setALAP(p+1);
             q.push(q.front()->getparent()[i]);
         }
         q.pop();
     }
+    for (auto i:list){
+        i.second->setALAP(stoi(string(argv[2]))-i.second->getALAP());
+    }
+    q.push(start);
+    while(!q.empty()){
+        for(int i=0;i<q.front()->getchild().size();i++){
+            int p=-1;
+            for (auto j:q.front()->getchild()[i]->getparent()){
+                if(j->getASAP()>p)
+                    p=j->getASAP();
+            }
+            q.front()->getchild()[i]->setASAP(p+1);
+            q.push(q.front()->getchild()[i]);
+        }
+        q.pop();
+    }
     int L=stoi(string(argv[2]));
-    MR_LCS mr_lcs(start,list,L);
-    mr_lcs.checkfeasible();
-    mr_lcs.run();
+    FD_LCS fd_lcs(start,list,L);
+    fd_lcs.checkfeasible();
+    fd_lcs.run();
+    //travesal(start);
 
-
+}
+void travesal(Node *n){
+    if(n->getchild().size()==0)
+        return;
+    cout <<n->getname()<<"   ASAP : "<<n->getASAP()<<"ALAP : "<<n->getALAP()<<"state : "<<n->getstate()<<endl;
+    for (int i=0;i<n->getchild().size();i++)
+        travesal(n->getchild()[i]);
 }
