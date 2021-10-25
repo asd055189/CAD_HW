@@ -11,6 +11,7 @@ class Node{
             ASAP=-2;
             op=-1;
             state=-1;
+            suit_to_be_place=false;
         };
         ~Node(){};
         void setALAP(int n){ALAP=n;};
@@ -31,6 +32,7 @@ class Node{
 
 
     private:
+        bool suit_to_be_place;
         int state;//-1:unready 0:ready 1:done 
         int ALAP;
         int ASAP;

@@ -24,7 +24,8 @@ class FD_LCS{
         void checkstate();
         void checkfeasible();
         void run();
-        vector<vector<double>> calculate_self_force();
+        void calculate_force();
+        double calculate_successor_force(int time,Node* start);
     private:
         int iteration;
         vector<vector<double>>constant;
@@ -116,13 +117,17 @@ void FD_LCS::run(){
         for(int i=iteration;i<constant[2].size();i++)
             cout <<"in it : "<<i<<endl<<constant[2][i]<<endl;
         ********************************/
+        /*
         vector<vector<double>>self_force;
-        self_force=calculate_self_force();
+        self_force=calculate_force();
         for (int bb=0;bb<3;bb++){
             cout <<"\nop"<<bb<<" : ";
             for (int aa=0;aa<self_force[bb].size();aa++)
                 cout<<ready_arr[bb][aa]->getname()<<"  "<<self_force[bb][aa]<<" ";
         }
+        */
+        calculate_force();
+        //cout<<"=====done====="<<endl;
         for (int i=0;i<3;i++){
             int usage_op=0;
             cout <<"{";
@@ -175,34 +180,82 @@ void FD_LCS::run(){
     cout<<"END"<<endl;
 
 }
-vector<vector<double>> FD_LCS::calculate_self_force(){
-    vector<vector<double>>self_force;
-    self_force.resize(3);
-    self_force[0].resize(ready_arr[0].size());
-    self_force[1].resize(ready_arr[1].size());
-    self_force[2].resize(ready_arr[2].size());
 
+//mark suit_to_be_place to true if current iteration is at least force
+void FD_LCS::calculate_force(){
+    
     for (auto i=0;i<3;i++){
-        int a=0;
         for (auto j:ready_arr[i]){
             int alap=j->getALAP();
             int asap=iteration;
             double delta=1.0/(alap-asap+1);
-            //cout<<"asap : "<<asap<<"//alap : "<<alap<<endl;
-            //cout <<"delta = 1.0/"<<(alap-asap+1)<<endl;
-            double force=constant[i][iteration]*delta;
-            //cout <<j->getname()<<endl;
-            //cout <<constant[i][iteration]<<" * "<<delta<<endl;
-            for(auto k=iteration+1;k<=alap;k++){
-                //cout <<" - "<<constant[i][k]<<" * "<<delta<<endl;
-                force-=constant[i][k]*delta;
+            vector<double>SF;
+            vector<double>PS_F;
+            //cout<<"\n===============node==============="<<j->getname()<<endl;
+            for (auto it=iteration;it<=alap;it++){
+                //cout <<"iteration "<<it<<endl;
+                double successor_force=0.0;
+
+                successor_force=calculate_successor_force(it,j);
+                //cout <<"successor_force "<<successor_force<<endl;
+                PS_F.push_back(successor_force);
+                double self_force=0.0;
+                for(auto k=iteration;k<=alap;k++){
+                    if(k==it){
+                        //cout<<" + "<<constant[i][k]*delta;
+                        self_force+=constant[i][k]*delta;
+                    }
+                    else{
+                        //cout<<" - "<<constant[i][k]*delta;
+                        self_force-=constant[i][k]*delta;
+                    }
+
+                }
+                //cout<<"\nself_force "<<self_force<<endl;
+
+                SF.push_back(self_force);
             }
-            //cout<<"============\n";
-            self_force[i][a]=force;
-            a++;
+            
+            vector<double>total_force;
+            for (int ii=0;ii<PS_F.size();ii++){
+                total_force.push_back(PS_F[ii]+SF[ii]);
+            }
+            /*****************************************
+            cout <<endl<<"node "<<j->getname()<<" : \n";
+            for(auto it:total_force){
+                cout <<it<<"\n";
+            }
+            cout<<"=====done====="<<endl;
+            *****************************************/
+            
+
         }
     }
-    return self_force;
+}
+
+
+double FD_LCS::calculate_successor_force(int time,Node* start){
+    double force=0.0;
+    //cout <<"call for "<<start->getname()<<"\'s child\n";
+    for (auto i:start->getchild()){
+        if(time==i->getASAP()){
+            double add=0.0,minus=0.0;
+            for(int j=i->getASAP();j<=i->getALAP();j++){
+                minus+=constant[i->getop()][j];
+                if(j>time)
+                    add+=constant[i->getop()][j];
+            }
+            //cout <<i->getname()<<" "<<add<<"/"<<(i->getALAP()-time)<<"-"<<minus<<"/"<<(i->getALAP()-i->getASAP()+1);
+            //cout <<"="<<add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1)<<endl;
+            
+            force+=add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1);
+            force+=calculate_successor_force(start->getASAP()+1,i);
+        }
+    }
+    //cout <<"return for "<<start->getname()<<"\'s child";
+    //cout <<" ="<<force<<endl;
+
+    return force;
 }
 
 #endif 
