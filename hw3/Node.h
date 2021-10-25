@@ -20,8 +20,12 @@ class Node{
         void setop(int n){op=n;};
         void setpre(Node*_in);
         void setnext(Node*_out);
+        void set_suit_to_be_place(int s){suit_to_be_place=s;};
+
+        
         void outpre();
         void outnxt();
+
         vector<Node *>getparent(){return parent;};
         vector<Node *>getchild(){return child;};
         string getname(){return name;}
@@ -29,10 +33,12 @@ class Node{
         int getop(){return op;};
         int getALAP(){return ALAP;};
         int getASAP(){return ASAP;};
+        int get_suit_to_be_place(){return suit_to_be_place;};
 
-
+        
     private:
-        bool suit_to_be_place;
+        double force;
+        int suit_to_be_place;
         int state;//-1:unready 0:ready 1:done 
         int ALAP;
         int ASAP;
