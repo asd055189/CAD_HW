@@ -26,6 +26,7 @@ class FD_LCS{
         void run();
         void calculate_force();
         double calculate_successor_force(int time,Node* start);
+        void calculate_constant();
     private:
         vector<string>calculated;
         int iteration;
@@ -39,22 +40,8 @@ void FD_LCS::checkstate(){
     ready_arr[0].clear();
     ready_arr[1].clear();
     ready_arr[2].clear();
-    constant[0].assign(constant[0].size(),0.0);
-    constant[1].assign(constant[1].size(),0.0);
-    constant[2].assign(constant[2].size(),0.0);
-    //select the unready(-1) node and set the node to ready state(0) while its parent are done(1)
+    //select the unready(-1) node and set the node to ready state(0) while its all parent are done(1)
     for(auto i:list){
-        if(i.second->getstate()!=1){
-            int alap=(i.second->getALAP()>iteration)?i.second->getALAP():iteration;
-            int asap=i.second->getASAP();
-            for(auto j=asap;j<=alap;j++){
-                //cout <<"op"<<i.second->getop()<<" : + "<<"1.0/"<<(alap-asap+1)<<endl;
-                constant[i.second->getop()][j]+=1.0/(alap-asap+1);
-            }
-
-            //cout <<"node : "<<i.first<<" //asap : "<<asap<<" //alap : "<<alap<<"//op : "<<i.second->getop()<<endl;
-        }
-
         if(i.second->getstate()==-1){
             bool tag=true;
             for(auto j:i.second->getparent()){
@@ -68,30 +55,11 @@ void FD_LCS::checkstate(){
             }
         }
     }
-    //sort the ready array with ALAP 
     for(auto i:list){
         if(i.second->getstate()==0){
-            //if(ready_arr[i.second->getop()].size()==0){
-                ready_arr[i.second->getop()].push_back(i.second);
-            /*}
-            else{
-                auto it=ready_arr[i.second->getop()].begin();
-                for(;it!=ready_arr[i.second->getop()].end();it++){
-                    if((*it)->getALAP()<i.second->getALAP()){
-                        break;
-                    }
-                }
-                ready_arr[i.second->getop()].insert(it,i.second);
-            }*/
+            ready_arr[i.second->getop()].push_back(i.second);
         }
     }    
-    /*
-    for (int i=0;i<constant[0].size();i++)
-        cout <<constant[0][i]<<endl;
-    cout <<endl;
-    for (int i=0;i<constant[2].size();i++)
-        cout <<constant[2][i]<<endl;
-    */
 }
 
 void FD_LCS::checkfeasible(){
@@ -106,105 +74,7 @@ void FD_LCS::checkfeasible(){
 }
 
 void FD_LCS::run(){
-    //int iteration=1;
-    checkstate();
-    int M_op[3]={0,0,0};
-    while(ready_arr[0].size()!=0 || ready_arr[1].size()!=0 || ready_arr[2].size()!=0){
-        cout <<iteration<<": ";
-
-        /********************************
-        cout <<endl<<"and operation"<<endl;
-        for(int i=iteration;i<constant[0].size();i++)
-            cout <<"in it : "<<i<<endl<<constant[0][i]<<endl;
-
-        cout <<endl<<"or operation"<<endl;
-        for(int i=iteration;i<constant[1].size();i++)
-            cout <<"in it : "<<i<<endl<<constant[1][i]<<endl;
-
-        cout <<endl<<"not operation"<<endl;
-        for(int i=iteration;i<constant[2].size();i++)
-            cout <<"in it : "<<i<<endl<<constant[2][i]<<endl;
-        ********************************/
-        /*
-        vector<vector<double>>self_force;
-        self_force=calculate_force();
-        for (int bb=0;bb<3;bb++){
-            cout <<"\nop"<<bb<<" : ";
-            for (int aa=0;aa<self_force[bb].size();aa++)
-                cout<<ready_arr[bb][aa]->getname()<<"  "<<self_force[bb][aa]<<" ";
-        }
-        */
-        calculate_force();
-        //cout<<"=====done====="<<endl;
-        for (int i=0;i<3;i++){
-            int usage_op=0;
-            cout <<"{";
-            bool temp=false;
-            if(M_op[i]==0)
-                M_op[i]++;
-            if(M_op[i]>=ready_arr[i].size()){//if max_op >= ready_arr's size (this case not need to select the node to be scheduled)
-                for (auto j:ready_arr[i]){
-                    list[j->getname()]->setstate(1);
-                    if(j==ready_arr[i][ready_arr[i].size()-1])
-                        cout<<j->getname();
-                    else
-                        cout<<j->getname()<<" ";
-                }
-            }
-            else{
-                for (auto j:ready_arr[i]){
-                    if(j->get_suit_to_be_place()==iteration && usage_op<M_op[i]){
-                        //cout <<"======================fit place==============\n";
-                        list[j->getname()]->setstate(1);
-                        if(temp)
-                            cout<<" ";
-                        temp=true;
-                        cout<<j->getname();
-                        usage_op++;
-                    }
-                    else if( j->getALAP()-iteration==0){//critical node (need to be scheduled immediately)
-                        //cout <<"======================critical place==============\n";
-
-                        list[j->getname()]->setstate(1);
-                        if(temp)
-                            cout<<" ";
-                        temp=true;
-                        cout<<j->getname();
-                        usage_op++;
-                    }
-                }
-                while(usage_op<M_op[i]){
-                    //cout <<"======================not fit place==============\n";
-                    Node* n=ready_arr[i][0];
-                    int nearest_step=n->get_suit_to_be_place()-iteration;
-                    for (auto j:ready_arr[i]){
-                        if(list[j->getname()]->getstate()!=1 && (j->get_suit_to_be_place()-iteration)<nearest_step){
-                            n=j;
-                            nearest_step=j->get_suit_to_be_place()-iteration;
-                        } 
-                    }
-                    list[n->getname()]->setstate(1);
-                    if(temp)
-                        cout<<" ";
-                    temp=true;
-                    cout<<n->getname();
-                    usage_op++;
-                }
-                if(usage_op>M_op[i])
-                    M_op[i]=usage_op;
-            }
-            cout <<"} ";
-            
-        }
-        cout <<endl;
-        iteration++;
-        checkstate();
-    }
-    cout <<"#AND: "<<M_op[0]<<endl;
-    cout <<"#OR: "<<M_op[1]<<endl;
-    cout <<"#NOT: "<<M_op[2]<<endl;
-    cout<<"END"<<endl;
-
+    
 }
 
 //mark suit_to_be_place to true if current iteration is at least force
@@ -256,8 +126,6 @@ void FD_LCS::calculate_force(){
             for(int a=0;a<total_force.size();a++){
                 cout <<SF[a]<<"+"<<PS_F[a]<<"="<<total_force[a]<<"\n";
             }
-            
-
             //cout<<"=====done====="<<endl;
             *****************************************/
             double minimal=total_force[0];
@@ -265,6 +133,7 @@ void FD_LCS::calculate_force(){
             j->set_suit_to_be_place(iteration);
             int num=0;
             bool flag=true;
+            //cout <<endl;
             for(auto k:total_force){
             //cout <<k<<endl;
                 if(k<minimal){
@@ -310,5 +179,7 @@ double FD_LCS::calculate_successor_force(int time,Node* start){
 
     return force;
 }
-
+void FD_LCS::calculate_constant(){
+    
+}
 #endif 
