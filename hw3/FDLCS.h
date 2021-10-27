@@ -10,10 +10,6 @@ class FD_LCS{
             root=r;
             list=l;
             limit_time=A;
-            ready_arr.resize(3);
-            ready_arr[0].resize(l.size());
-            ready_arr[1].resize(l.size());
-            ready_arr[2].resize(l.size());
             constant.resize(3);
             constant[0].resize(A+1);
             constant[1].resize(A+1);
@@ -24,7 +20,7 @@ class FD_LCS{
         void checkstate();
         void checkfeasible();
         void run();
-        void calculate_force();
+        void calculate_force(Node * n);
         double calculate_successor_force(int time,Node* start);
         void calculate_constant();
     private:
@@ -34,7 +30,7 @@ class FD_LCS{
         Node* root;
         map<string,Node*>list;
         int limit_time;
-        vector<vector<Node*>>ready_arr;
+        vector<Node*>ready_arr;
 };
 
 void FD_LCS::checkfeasible(){
@@ -49,9 +45,7 @@ void FD_LCS::checkfeasible(){
 }
 
 void FD_LCS::checkstate(){
-    ready_arr[0].clear();
-    ready_arr[1].clear();
-    ready_arr[2].clear();
+    ready_arr.clear();
     //select the unready(-1) node and set the node to ready state(0) while its all parent are done(1)
     for(auto i:list){
         if(i.second->getstate()==-1){
@@ -69,203 +63,151 @@ void FD_LCS::checkstate(){
     }
     for(auto i:list){
         if(i.second->getstate()==0){
-            ready_arr[i.second->getop()].push_back(i.second);
+            ready_arr.push_back(i.second);
         }
     }    
 }
 
 
 void FD_LCS::run(){
-   //int iteration=1;
+    iteration=1;
     checkstate();
     calculate_constant();
     int M_op[3]={0,0,0};
-    while(ready_arr[0].size()!=0 || ready_arr[1].size()!=0 || ready_arr[2].size()!=0){
-        cout <<iteration<<": ";
+    vector<vector<vector<string>>>output;
+    output.resize(limit_time);
+    for(int i=0;i<output.size();i++)
+        output[i].resize(3);
+    while(ready_arr.size()!=0){
+        //cout <<"\niteration:"<<iteration<<endl;
+        
+        for (auto i:ready_arr){
+            calculate_force(i);
+            list[i->getname()]->setstate(1);
+            i->setALAP(i->get_suit_to_be_place());
+            i->setASAP(i->get_suit_to_be_place());
+            //cout <<"put "<<i->getname()<<"on "<<i->get_suit_to_be_place();
+            //cout <<" getop "<<i->getop()<<endl;
 
-        /********************************
-        cout <<endl<<"and operation"<<endl;
-        for(int i=iteration;i<constant[0].size();i++)
-            cout <<"in it : "<<i<<endl<<constant[0][i]<<endl;
-        cout <<endl<<"or operation"<<endl;
-        for(int i=iteration;i<constant[1].size();i++)
-            cout <<"in it : "<<i<<endl<<constant[1][i]<<endl;
-        cout <<endl<<"not operation"<<endl;
-        for(int i=iteration;i<constant[2].size();i++)
-            cout <<"in it : "<<i<<endl<<constant[2][i]<<endl;
-        ********************************/
-        /*
-        vector<vector<double>>self_force;
-        self_force =calculate_force();
-        for (int bb=0;bb<3;bb++){
-            cout <<"\nop"<<bb<<" : ";
-            for (int aa=0;aa<self_force[bb].size();aa++)
-                cout<<ready_arr[bb][aa]->getname()<<"  "<<self_force[bb][aa]<<" ";
+            output[i->get_suit_to_be_place()-1][i->getop()].push_back(i->getname());
+
+            calculate_constant();
         }
-        */
-        calculate_force();
-        //cout<<"=====done====="<<endl;
-        for (int i=0;i<3;i++){
-            int usage_op=0;
+        checkstate();
+        //iteration++;
+    }
+    int it=1;
+    int ops[3]={0,0,0};
+    for(auto i:output){
+        cout <<it<<": ";
+        int op=0;
+        for(auto j:i){
+            if(ops[op]<j.size())
+                ops[op]=j.size();
+            bool tag1=false;
             cout <<"{";
-            bool temp=false;
-            if(M_op[i]==0)
-                M_op[i]++;
-            if(M_op[i]>=ready_arr[i].size()){//if max_op >= ready_arr's size (this case not need to select the node to be scheduled)
-                for (auto j:ready_arr[i]){
-                    list[j->getname()]->setstate(1);
-                    if(j==ready_arr[i][ready_arr[i].size()-1])
-                        cout<<j->getname();
-                    else
-                        cout<<j->getname()<<" ";
+            for(auto k:j){
+                if(tag1)
+                    cout <<" "<<k;
+                else{
+                    tag1=true;
+                    cout <<k;
                 }
             }
-            else{
-                for (auto j:ready_arr[i]){
-                    if(j->get_suit_to_be_place()==iteration ){
-                        //cout <<"======================fit place==============\n";
-                        list[j->getname()]->setstate(1);
-                        list[j->getname()]->setALAP(iteration);
-                        list[j->getname()]->setASAP(iteration);
-                        calculate_constant();
-                        calculate_force();
-                        if(temp)
-                            cout<<" ";
-                        temp=true;
-                        cout<<j->getname();
-                        usage_op++;
-                    }
-                    /*else if( j->getALAP()-iteration==0){//critical node (need to be scheduled immediately)
-                        //cout <<"======================critical place==============\n";
-
-                        list[j->getname()]->setstate(1);
-                        if(temp)
-                            cout<<" ";
-                        temp=true;
-                        cout<<j->getname();
-                        usage_op++;
-                    }*/
-                }
-                while(usage_op<M_op[i]){
-                    //cout <<"123\n";
-                    Node* n=nullptr;
-                    int nearest_step=1;
-                    for (auto j:ready_arr[i]){
-                        if(list[j->getname()]->getstate()!=1 && (j->get_suit_to_be_place()-iteration)==nearest_step){
-                            n=j;
-                            //nearest_step=j->get_suit_to_be_place()-iteration;
-                        } 
-                    }
-                    if(n!=nullptr){
-                        //cout <<"======================not fit place==============\n";
-                        list[n->getname()]->setstate(1);
-                        list[n->getname()]->setALAP(iteration+nearest_step);
-                        list[n->getname()]->setASAP(iteration+nearest_step);
-                        calculate_constant();
-                        calculate_force();
-                        if(temp)
-                            cout<<" ";
-                        temp=true;
-                        cout<<n->getname();
-                        usage_op++;
-                    }
-                    else{
-                        break;
-                    }
-                    nearest_step++;
-                }
-                if(usage_op>M_op[i])
-                    M_op[i]=usage_op;
-            }
-            cout <<"} ";
-            
+            if(op<2)
+                cout <<"} ";
+            else
+                cout <<"}";
+            op++;
         }
         cout <<endl;
-        iteration++;
-        checkstate();
-        calculate_constant();
+        it++;
     }
-    cout <<"#AND: "<<M_op[0]<<endl;
-    cout <<"#OR: "<<M_op[1]<<endl;
-    cout <<"#NOT: "<<M_op[2]<<endl;
-    cout<<"END"<<endl;
+    cout <<"#AND: "<<ops[0]<<endl;
+    cout <<"#OR: "<<ops[1]<<endl;
+    cout <<"#NOT: "<<ops[2]<<endl;
+    cout <<"END"<<endl;
+
 }
     
 
 //mark suit_to_be_place to true if current iteration is at least force
-void FD_LCS::calculate_force(){
-    
-    for (auto i=0;i<3;i++){
-        for (auto j:ready_arr[i]){
-            int alap=j->getALAP();
-            int asap=iteration;
-            double delta=1.0/(alap-asap+1);
-            vector<double>SF;
-            vector<double>PS_F;
-            //cout<<"\n===============node==============="<<j->getname()<<endl;
-            for (auto it=iteration;it<=alap;it++){
-                //cout <<"iteration "<<it<<endl;
-                double successor_force=0.0;
-                //cout <<endl;
-                calculated.clear();
-                successor_force=calculate_successor_force(it,j);
-                //cout <<"successor_force "<<successor_force<<endl;
-                PS_F.push_back(successor_force);
-                double self_force=0.0;
-                for(auto k=iteration;k<=alap;k++){
-                    if(k==it){
-                        //cout<<" + "<<constant[i][k]*delta;
-                        self_force+=constant[i][k]*delta;
-                    }
-                    else{
-                        //cout<<" - "<<constant[i][k]*delta;
-                        self_force-=constant[i][k]*delta;
-                    }
+void FD_LCS::calculate_force(Node * n){
 
-                }
-                //cout<<"\nself_force "<<self_force<<endl;
+        int alap=n->getALAP();
+        int asap=n->getASAP();
 
-                SF.push_back(self_force);
-                //if(it==2)
-                  //  exit(0);
-
-            }
-            vector<double>total_force;
-            for (int ii=0;ii<PS_F.size();ii++){
-                total_force.push_back(PS_F[ii]+SF[ii]);
-            }
-            /***************************************
-            cout <<endl<<"node "<<j->getname()<<" : \n";
-            cout <<"ASAP"<<j->getASAP()<<" ALAP"<<j->getALAP()<<endl;
-            cout <<"iteration"<<iteration<<endl;
-            for(int a=0;a<total_force.size();a++){
-                cout <<SF[a]<<"+"<<PS_F[a]<<"="<<total_force[a]<<"\n";
-            }
-            //cout<<"=====done====="<<endl;
-            *****************************************/
-            double minimal=total_force[0];
-            //cout <<"minimal set to "<<minimal<<endl;
-            j->set_suit_to_be_place(iteration);
-            int num=0;
-            bool flag=true;
+        /*
+        cout<< n->getname()<<"iteration "<<iteration<<endl;
+        cout<< n->getname()<<"alap "<<alap<<endl;
+        cout<< n->getname()<<"asap "<<n->getASAP()<<endl;
+        */
+        double delta=1.0/(alap-asap+1);
+        vector<double>SF;
+        vector<double>PS_F;
+        //cout<<"\n===============node==============="<<j->getname()<<endl;
+        for (auto it=asap;it<=alap;it++){
+            //cout <<"iteration "<<it<<endl;
+            double successor_force=0.0;
             //cout <<endl;
-            for(auto k:total_force){
-            //cout <<k<<endl;
-                if(k<minimal){
-                   // cout <<"yes!!"<<endl;
-                    flag=false;
-                    break;
+            calculated.clear();
+            successor_force=calculate_successor_force(it,n);
+            //cout <<"successor_force "<<successor_force<<endl;
+            PS_F.push_back(successor_force);
+            double self_force=0.0;
+            for(auto k=iteration;k<=alap;k++){
+                if(k==it){
+                    //cout<<" + "<<constant[i][k]*delta;
+                    self_force+=constant[n->getop()][k]*delta;
                 }
-                num++;
+                else{
+                    //cout<<" - "<<constant[i][k]*delta;
+                    self_force-=constant[n->getop()][k]*delta;
+                }
+
             }
-            if(!flag){
-                j->set_suit_to_be_place(iteration+num);
-            }
-           // cout<< j->getname()<<" can be place at"<<j->get_suit_to_be_place()<<endl;
+            //cout<<"\nself_force "<<self_force<<endl;
+
+            SF.push_back(self_force);
+            //if(it==2)
+                //  exit(0);
 
         }
+        vector<double>total_force;
+        for (int ii=0;ii<PS_F.size();ii++){
+            total_force.push_back(PS_F[ii]+SF[ii]);
+        }
+        /***************************************
+        cout <<endl<<"node "<<n->getname()<<" : \n";
+        cout <<"ASAP"<<n->getASAP()<<" ALAP"<<n->getALAP()<<endl;
+        cout <<"iteration"<<iteration<<endl;
+        for(int a=0;a<total_force.size();a++){
+            cout <<SF[a]<<"+"<<PS_F[a]<<"="<<total_force[a]<<"\n";
+        }
+        //cout<<"=====done====="<<endl;
+        *****************************************/
+        double minimal=total_force[0];
+        //cout <<"minimal set to "<<minimal<<endl;
+        n->set_suit_to_be_place(asap);
 
-    }
+        int num=0;
+        int minnum;
+        bool flag=true;
+        //cout <<endl;
+        for(auto k:total_force){
+            //cout <<k<<endl;
+            if(k<minimal){
+                // cout <<"yes!!"<<endl;
+                minnum=num;
+                flag=false;
+            }
+            num++;
+        }
+        if(!flag){
+            n->set_suit_to_be_place(asap+minnum);
+        //cout<< n->getname()<<"iteration "<<iteration<<" num "<<num<<endl;
+        }
+        //cout<< n->getname()<<" can be place at"<<n->get_suit_to_be_place()<<endl;
 }
 
 
