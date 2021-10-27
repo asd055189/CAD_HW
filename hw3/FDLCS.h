@@ -36,6 +36,18 @@ class FD_LCS{
         int limit_time;
         vector<vector<Node*>>ready_arr;
 };
+
+void FD_LCS::checkfeasible(){
+    for(int i=0;i<root->getchild().size();i++){
+        root->getchild()[i]->setstate(1);
+    }
+    for(auto i:list)
+        if(i.second->getstate()!=1&& i.second->getALAP()==0){
+            cout <<"No feasible solution.\nEND\n";
+            exit(0);
+        }
+}
+
 void FD_LCS::checkstate(){
     ready_arr[0].clear();
     ready_arr[1].clear();
@@ -62,20 +74,123 @@ void FD_LCS::checkstate(){
     }    
 }
 
-void FD_LCS::checkfeasible(){
-    for(int i=0;i<root->getchild().size();i++){
-        root->getchild()[i]->setstate(1);
-    }
-    for(auto i:list)
-        if(i.second->getstate()!=1&& i.second->getALAP()==0){
-            cout <<"No feasible solution.\nEND\n";
-            exit(0);
-        }
-}
 
 void FD_LCS::run(){
-    
+   //int iteration=1;
+    checkstate();
+    calculate_constant();
+    int M_op[3]={0,0,0};
+    while(ready_arr[0].size()!=0 || ready_arr[1].size()!=0 || ready_arr[2].size()!=0){
+        cout <<iteration<<": ";
+
+        /********************************
+        cout <<endl<<"and operation"<<endl;
+        for(int i=iteration;i<constant[0].size();i++)
+            cout <<"in it : "<<i<<endl<<constant[0][i]<<endl;
+        cout <<endl<<"or operation"<<endl;
+        for(int i=iteration;i<constant[1].size();i++)
+            cout <<"in it : "<<i<<endl<<constant[1][i]<<endl;
+        cout <<endl<<"not operation"<<endl;
+        for(int i=iteration;i<constant[2].size();i++)
+            cout <<"in it : "<<i<<endl<<constant[2][i]<<endl;
+        ********************************/
+        /*
+        vector<vector<double>>self_force;
+        self_force =calculate_force();
+        for (int bb=0;bb<3;bb++){
+            cout <<"\nop"<<bb<<" : ";
+            for (int aa=0;aa<self_force[bb].size();aa++)
+                cout<<ready_arr[bb][aa]->getname()<<"  "<<self_force[bb][aa]<<" ";
+        }
+        */
+        calculate_force();
+        //cout<<"=====done====="<<endl;
+        for (int i=0;i<3;i++){
+            int usage_op=0;
+            cout <<"{";
+            bool temp=false;
+            if(M_op[i]==0)
+                M_op[i]++;
+            if(M_op[i]>=ready_arr[i].size()){//if max_op >= ready_arr's size (this case not need to select the node to be scheduled)
+                for (auto j:ready_arr[i]){
+                    list[j->getname()]->setstate(1);
+                    if(j==ready_arr[i][ready_arr[i].size()-1])
+                        cout<<j->getname();
+                    else
+                        cout<<j->getname()<<" ";
+                }
+            }
+            else{
+                for (auto j:ready_arr[i]){
+                    if(j->get_suit_to_be_place()==iteration ){
+                        //cout <<"======================fit place==============\n";
+                        list[j->getname()]->setstate(1);
+                        list[j->getname()]->setALAP(iteration);
+                        list[j->getname()]->setASAP(iteration);
+                        calculate_constant();
+                        calculate_force();
+                        if(temp)
+                            cout<<" ";
+                        temp=true;
+                        cout<<j->getname();
+                        usage_op++;
+                    }
+                    /*else if( j->getALAP()-iteration==0){//critical node (need to be scheduled immediately)
+                        //cout <<"======================critical place==============\n";
+
+                        list[j->getname()]->setstate(1);
+                        if(temp)
+                            cout<<" ";
+                        temp=true;
+                        cout<<j->getname();
+                        usage_op++;
+                    }*/
+                }
+                while(usage_op<M_op[i]){
+                    //cout <<"123\n";
+                    Node* n=nullptr;
+                    int nearest_step=1;
+                    for (auto j:ready_arr[i]){
+                        if(list[j->getname()]->getstate()!=1 && (j->get_suit_to_be_place()-iteration)==nearest_step){
+                            n=j;
+                            //nearest_step=j->get_suit_to_be_place()-iteration;
+                        } 
+                    }
+                    if(n!=nullptr){
+                        //cout <<"======================not fit place==============\n";
+                        list[n->getname()]->setstate(1);
+                        list[n->getname()]->setALAP(iteration+nearest_step);
+                        list[n->getname()]->setASAP(iteration+nearest_step);
+                        calculate_constant();
+                        calculate_force();
+                        if(temp)
+                            cout<<" ";
+                        temp=true;
+                        cout<<n->getname();
+                        usage_op++;
+                    }
+                    else{
+                        break;
+                    }
+                    nearest_step++;
+                }
+                if(usage_op>M_op[i])
+                    M_op[i]=usage_op;
+            }
+            cout <<"} ";
+            
+        }
+        cout <<endl;
+        iteration++;
+        checkstate();
+        calculate_constant();
+    }
+    cout <<"#AND: "<<M_op[0]<<endl;
+    cout <<"#OR: "<<M_op[1]<<endl;
+    cout <<"#NOT: "<<M_op[2]<<endl;
+    cout<<"END"<<endl;
 }
+    
 
 //mark suit_to_be_place to true if current iteration is at least force
 void FD_LCS::calculate_force(){
@@ -145,8 +260,9 @@ void FD_LCS::calculate_force(){
             }
             if(!flag){
                 j->set_suit_to_be_place(iteration+num);
-                //cout<< j->getname()<<" can be place at"<<iteration+num<<endl;
             }
+           // cout<< j->getname()<<" can be place at"<<j->get_suit_to_be_place()<<endl;
+
         }
 
     }
@@ -179,7 +295,27 @@ double FD_LCS::calculate_successor_force(int time,Node* start){
 
     return force;
 }
+
 void FD_LCS::calculate_constant(){
-    
+    constant[0].assign(constant[0].size(),0.0);
+    constant[1].assign(constant[1].size(),0.0);
+    constant[2].assign(constant[2].size(),0.0);
+
+    for(auto i:list){
+        if(i.second->getop()!=-1){
+            int alap=i.second->getALAP();
+            int asap=i.second->getASAP();
+            for(auto j=asap;j<=alap;j++){
+                //cout <<"op"<<i.second->getop()<<" : + "<<"1.0/"<<(alap-asap+1)<<endl;
+                constant[i.second->getop()][j]+=1.0/(alap-asap+1);
+            }
+
+            //cout <<"node : "<<i.first<<" //asap : "<<asap<<" //alap : "<<alap<<"//op : "<<i.second->getop()<<endl;
+        }
+    }
+    /*for (auto i:constant[0])
+    {
+        cout <<i<<endl;
+    }*/
 }
 #endif 
