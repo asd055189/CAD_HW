@@ -83,10 +83,10 @@ void FD_LCS::run(){
         Node *select=nullptr;
         int min_slack=INT_MAX;
 
-        for(auto i:ready_arr){
-            if(i->getALAP()-i->getASAP()<min_slack){
-                min_slack=i->getALAP()-i->getASAP();
-                select=i;
+        for(auto i:list){
+            if(i.second->getALAP()-i.second->getASAP()<min_slack && i.second->getop()!=-1){
+                min_slack=i.second->getALAP()-i.second->getASAP();
+                select=i.second;
             }
         }
         //for (auto i:ready_arr){
@@ -103,10 +103,10 @@ void FD_LCS::run(){
             select=nullptr;
             min_slack=INT_MAX;
             checkstate();
-            for(auto i:ready_arr){
-                if(i->getALAP()-i->getASAP()<min_slack && i->getstate()!=1){
-                    min_slack=i->getALAP()-i->getASAP();
-                    select=i;
+            for(auto i:list){
+                if(i.second->getALAP()-i.second->getASAP()<min_slack && i.second->getstate()!=1&& i.second->getop()!=-1){
+                    min_slack=i.second->getALAP()-i.second->getASAP();
+                    select=i.second;
                 }
             }
             calculate_constant();
