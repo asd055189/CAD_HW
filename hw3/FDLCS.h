@@ -17,7 +17,6 @@ class FD_LCS{
             iteration=1;
         };
         ~FD_LCS(){};
-        void checkstate();
         void checkfeasible();
         void run();
         void calculate_force(Node * n);
@@ -46,86 +45,55 @@ void FD_LCS::checkfeasible(){
     }
 }
 
-void FD_LCS::checkstate(){
-    ready_arr.clear();
-    //select the unready(-1) node and set the node to ready state(0) while its all parent are done(1)
-    for(auto i:list){
-        if(i.second->getstate()==-1){
-            bool tag=true;
-            for(auto j:i.second->getparent()){
-                if(j->getstate()!=1){
-                    tag=false;
-                    break;
-                }
-            }
-            if(tag){
-                i.second->setstate(0);
-            }
-        }
-    }
-    for(auto i:list){
-        if(i.second->getstate()==0){
-            ready_arr.push_back(i.second);
-        }
-    }    
-}
-
-
 void FD_LCS::run(){
     iteration=1;
-    checkstate();
     calculate_constant();
     int M_op[3]={0,0,0};
     vector<vector<vector<string>>>output;
     output.resize(limit_time);
     for(int i=0;i<output.size();i++)
         output[i].resize(3);
-    while(ready_arr.size()!=0){
-        //cout <<"\niteration:"<<iteration<<endl;
-        Node *select=nullptr;
-        int min_slack=INT_MAX;
-
-        for(auto i:list){
-            if(i.second->getALAP()-i.second->getASAP()<min_slack && i.second->getop()!=-1){
+    Node *select=nullptr;
+    int min_slack=INT_MAX;
+    for(auto i:list){//select a node that has minimal (ALAP-ASAP)
+        if(i.second->getALAP()-i.second->getASAP()<min_slack && i.second->getop()!=-1){
+            min_slack=i.second->getALAP()-i.second->getASAP();
+            select=i.second;
+        }
+    }
+    while(select!=nullptr){
+        calculate_force(select);
+        list[select->getname()]->setstate(1);
+        select->setALAP(select->get_suit_to_be_place());
+        select->setASAP(select->get_suit_to_be_place());
+        for (auto i:select->getchild()){
+            if(i->getASAP()<=select->get_suit_to_be_place())
+                i->setASAP(select->get_suit_to_be_place()+1);//set the child ASAP;
+        }
+         for (auto i:select->getparent()){
+            if(i->getALAP()>=select->get_suit_to_be_place())
+                i->setALAP(select->get_suit_to_be_place()-1);//set the parent ALAP;
+        }
+        output[select->get_suit_to_be_place()-1][select->getop()].push_back(select->getname());
+        select=nullptr;
+        min_slack=INT_MAX;
+        for(auto i:list){//select a node state!=done and has minimal (ALAP-ASAP)
+            if(i.second->getALAP()-i.second->getASAP()<min_slack && i.second->getstate()!=1&& i.second->getop()!=-1){
                 min_slack=i.second->getALAP()-i.second->getASAP();
                 select=i.second;
             }
         }
-        //for (auto i:ready_arr){
-        while(select!=nullptr){
-            calculate_force(select);
-            list[select->getname()]->setstate(1);
-            select->setALAP(select->get_suit_to_be_place());
-            select->setASAP(select->get_suit_to_be_place());
-            for (auto i:select->getchild()){
-                if(i->getASAP()<=select->get_suit_to_be_place())
-                    i->setASAP(select->get_suit_to_be_place()+1);
-            }
-            output[select->get_suit_to_be_place()-1][select->getop()].push_back(select->getname());
-            select=nullptr;
-            min_slack=INT_MAX;
-            checkstate();
-            for(auto i:list){
-                if(i.second->getALAP()-i.second->getASAP()<min_slack && i.second->getstate()!=1&& i.second->getop()!=-1){
-                    min_slack=i.second->getALAP()-i.second->getASAP();
-                    select=i.second;
-                }
-            }
-            calculate_constant();
-        }
-        //}
-        //iteration++;
+        calculate_constant();
     }
+
     int it=1;
     int ops[3]={0,0,0};
-    //int s_maxop[3]{0,0,0};
     for(auto i:output){
         cout <<it<<": ";
         int op=0;
         for(auto j:i){
             if(ops[op]<j.size()){
                 ops[op]=j.size();
-                //s_maxop[op]=it;
             }
             bool tag1=false;
             cout <<"{";
@@ -154,75 +122,45 @@ void FD_LCS::run(){
 }
     
 
-//mark suit_to_be_place to true if current iteration is at least force
 void FD_LCS::calculate_force(Node * n){
 
         int alap=n->getALAP();
         int asap=n->getASAP();
 
-        /*
-        cout<< n->getname()<<"iteration "<<iteration<<endl;
-        cout<<endl<< n->getname()<<"alap "<<alap<<endl;
-        cout<< n->getname()<<"asap "<<n->getASAP()<<endl;
-        */
         double delta=1.0/(alap-asap+1);
         vector<double>SF;
         vector<double>PS_F;
-        //cout<<"\n===============node==============="<<j->getname()<<endl;
         for (auto it=asap;it<=alap;it++){
-            //cout <<"iteration "<<it<<endl;
             double successor_force=0.0;
             double predecessor_force=0.0;
-            //cout <<endl;
             calculated.clear();
             successor_force=calculate_successor_force(it,n);
             calculated.clear();
             predecessor_force=calculate_predecessor_force(it,n);
-
-            //cout <<"successor_force "<<successor_force<<endl;
             PS_F.push_back(successor_force+predecessor_force);
             double self_force=0.0;
             for(auto k=asap;k<=alap;k++){
                 if(k==it){
-                    //cout<<" + "<<constant[n->getop()][k]*delta;
                     self_force+=constant[n->getop()][k]*delta;
                 }
                 else{
-                    //cout<<" - "<<constant[n->getop()][k]*delta;
                     self_force-=constant[n->getop()][k]*delta;
                 }
 
             }
-            //cout<<"\nself_force "<<self_force<<endl;
-
             SF.push_back(self_force);
-            //if(it==2)
-                //  exit(0);
-
         }
         vector<double>total_force;
         for (int ii=0;ii<PS_F.size();ii++){
             total_force.push_back(PS_F[ii]+SF[ii]);
         }
-        /***************************************
-        cout <<"node "<<n->getname()<<" : \n";
-        cout <<"ASAP"<<n->getASAP()<<" ALAP"<<n->getALAP()<<endl;
-        cout <<"iteration"<<iteration<<endl;
-        for(int a=0;a<total_force.size();a++){
-            cout <<SF[a]<<"+"<<PS_F[a]<<"="<<total_force[a]<<"\n";
-        }
-        //cout<<"=====done====="<<endl;
-        /*****************************************/
         double minimal=total_force[0];
-        //cout <<"minimal set to "<<minimal<<endl;
         n->set_suit_to_be_place(asap);
 
         int num=0;
         int minnum;
         bool flag=true;
-        //cout <<endl;
         for(auto k:total_force){
-            //cout <<k<<endl;
             if(k<minimal){
                 minnum=num;
                 flag=false;
@@ -232,73 +170,45 @@ void FD_LCS::calculate_force(Node * n){
         }
         if(!flag){
             n->set_suit_to_be_place(asap+minnum);
-        //cout<< n->getname()<<"iteration "<<iteration<<" num "<<num<<endl;
         }
-        
-        /*
-        //cout <<"ASAP"<<n->getASAP()<<" ALAP"<<n->getALAP()<<endl;
-        for(int a=0;a<total_force.size();a++){
-            cout <<SF[a]<<"+"<<PS_F[a]<<"="<<total_force[a]<<"\n";
-        }
-        //cout<< n->getname()<<" can be place at"<<n->get_suit_to_be_place()<<endl;
-        */
 }
 
 double FD_LCS::calculate_predecessor_force(int time,Node* start){
     double force=0.0;
-   // cout <<"call for "<<start->getname()<<"\'s child"<<"time="<<time<<"\n";
     for (auto i:start->getparent()){
         if(time<=i->getALAP()&&find(calculated.begin(),calculated.end(),i->getname())==calculated.end()&&i->getop()!=-1){
             calculated.push_back(i->getname());
             double add=0.0,minus=0.0;
-            //cout <<i->getname()<<" ASAP"<<i->getASAP()<<" ALAP"<<i->getALAP()<<endl;
             for(int j=i->getASAP();j<=i->getALAP();j++){
                 minus+=constant[i->getop()][j];
-                //cout<<constant[i->getop()][j]<<endl;
                 if(j<time){
                     add+=constant[i->getop()][j];
-                    //cout<<"---"<<constant[i->getop()][j]<<endl;
                 }
             }
-           // cout <<i->getname()<<" "<<add<<"/"<<(i->getALAP()-time)<<"-"<<minus<<"/"<<(i->getALAP()-i->getASAP()+1);
-           // cout <<"="<<add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1)<<endl;
             
             force+=add/(time-i->getASAP())-minus/(i->getALAP()-i->getASAP()+1);
             force+=calculate_predecessor_force(time-1,i);
         }
     }
-    //cout <<"return for "<<start->getname()<<"\'s child";
-    //cout <<" ="<<force<<endl;
-
     return force;
 }
 
 double FD_LCS::calculate_successor_force(int time,Node* start){
     double force=0.0;
-   // cout <<"call for "<<start->getname()<<"\'s child"<<"time="<<time<<"\n";
     for (auto i:start->getchild()){
         if(time>=i->getASAP()&&find(calculated.begin(),calculated.end(),i->getname())==calculated.end()&&i->getop()!=-1){
             calculated.push_back(i->getname());
             double add=0.0,minus=0.0;
-            //cout <<i->getname()<<" ASAP"<<i->getASAP()<<" ALAP"<<i->getALAP()<<endl;
             for(int j=i->getASAP();j<=i->getALAP();j++){
                 minus+=constant[i->getop()][j];
-                //cout<<constant[i->getop()][j]<<endl;
                 if(j>time){
                     add+=constant[i->getop()][j];
-                    //cout<<"---"<<constant[i->getop()][j]<<endl;
                 }
             }
-           // cout <<i->getname()<<" "<<add<<"/"<<(i->getALAP()-time)<<"-"<<minus<<"/"<<(i->getALAP()-i->getASAP()+1);
-           // cout <<"="<<add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1)<<endl;
-            
             force+=add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1);
             force+=calculate_successor_force(time+1,i);
         }
     }
-    //cout <<"return for "<<start->getname()<<"\'s child";
-    //cout <<" ="<<force<<endl;
-
     return force;
 }
 
@@ -312,16 +222,9 @@ void FD_LCS::calculate_constant(){
             int alap=i.second->getALAP();
             int asap=i.second->getASAP();
             for(auto j=asap;j<=alap;j++){
-                //cout <<"op"<<i.second->getop()<<" : + "<<"1.0/"<<(alap-asap+1)<<endl;
                 constant[i.second->getop()][j]+=1.0/(alap-asap+1);
             }
-
-            //cout <<"node : "<<i.first<<" //asap : "<<asap<<" //alap : "<<alap<<"//op : "<<i.second->getop()<<endl;
         }
     }
-    /*for (auto i:constant[0])
-    {
-        cout <<i<<endl;
-    }*/
 }
 #endif 

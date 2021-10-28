@@ -64,16 +64,16 @@ int main(int argc, char *argv[]){
                     token=token.substr(token.find(" ")+1,token.size()-1);
                 }
             }
+
             //build graph
             for (int i=0;i<variables.size()-1;i++)
                 list[variables[variables.size()-1]]->setpre(list[variables[i]]);
             for (int i=0;i<variables.size()-1;i++)
                 list[variables[i]]->setnext(list[variables[variables.size()-1]]);
             //build graph
+            
             string exp="";
             while(infile>>token){
-                //cout<<token<<endl;
-
                 if(token.find(".names")!=-1 || token==".end")
                     break;
                 if (exp!=""){
@@ -96,8 +96,6 @@ int main(int argc, char *argv[]){
                     }
                 }
             }
-
-            //outfile <<*variables.rbegin()<<" ="<<exp<<endl;
 
         }
 	}
@@ -123,7 +121,6 @@ int main(int argc, char *argv[]){
         end->setpre(end_node[i]);
         end_node[i]->setnext(end);
     }
-
     queue<Node *>q;
     q.push(end);
     while(!q.empty()){
@@ -138,11 +135,9 @@ int main(int argc, char *argv[]){
         }
         q.pop();
     }
- 
     for (auto i:list){
         i.second->setALAP(stoi(string(argv[2]))-i.second->getALAP());
     }
-
     q.push(start);
     while(!q.empty()){
         for(int i=0;i<q.front()->getchild().size();i++){
@@ -159,9 +154,7 @@ int main(int argc, char *argv[]){
     int L=stoi(string(argv[2]));
     FD_LCS fd_lcs(start,list,L);
     fd_lcs.checkfeasible();
-
     fd_lcs.run();
-    //travesal(start);
 
 }
 void travesal(Node *n){
