@@ -22,6 +22,7 @@ class FD_LCS{
         void run();
         void calculate_force(Node * n);
         double calculate_successor_force(int time,Node* start);
+        double calculate_predecessor_force(int time,Node* start);
         void calculate_constant();
     private:
         vector<string>calculated;
@@ -37,11 +38,12 @@ void FD_LCS::checkfeasible(){
     for(int i=0;i<root->getchild().size();i++){
         root->getchild()[i]->setstate(1);
     }
-    for(auto i:list)
+    for(auto i:list){
         if(i.second->getstate()!=1&& i.second->getALAP()==0){
             cout <<"No feasible solution.\nEND\n";
             exit(0);
         }
+    }
 }
 
 void FD_LCS::checkstate(){
@@ -170,11 +172,15 @@ void FD_LCS::calculate_force(Node * n){
         for (auto it=asap;it<=alap;it++){
             //cout <<"iteration "<<it<<endl;
             double successor_force=0.0;
+            double predecessor_force=0.0;
             //cout <<endl;
             calculated.clear();
             successor_force=calculate_successor_force(it,n);
+            calculated.clear();
+            predecessor_force=calculate_predecessor_force(it,n);
+
             //cout <<"successor_force "<<successor_force<<endl;
-            PS_F.push_back(successor_force);
+            PS_F.push_back(successor_force+predecessor_force);
             double self_force=0.0;
             for(auto k=asap;k<=alap;k++){
                 if(k==it){
@@ -238,16 +244,44 @@ void FD_LCS::calculate_force(Node * n){
         */
 }
 
+double FD_LCS::calculate_predecessor_force(int time,Node* start){
+    double force=0.0;
+   // cout <<"call for "<<start->getname()<<"\'s child"<<"time="<<time<<"\n";
+    for (auto i:start->getparent()){
+        if(time<=i->getALAP()&&find(calculated.begin(),calculated.end(),i->getname())==calculated.end()&&i->getop()!=-1){
+            calculated.push_back(i->getname());
+            double add=0.0,minus=0.0;
+            //cout <<i->getname()<<" ASAP"<<i->getASAP()<<" ALAP"<<i->getALAP()<<endl;
+            for(int j=i->getASAP();j<=i->getALAP();j++){
+                minus+=constant[i->getop()][j];
+                //cout<<constant[i->getop()][j]<<endl;
+                if(j<time){
+                    add+=constant[i->getop()][j];
+                    //cout<<"---"<<constant[i->getop()][j]<<endl;
+                }
+            }
+           // cout <<i->getname()<<" "<<add<<"/"<<(i->getALAP()-time)<<"-"<<minus<<"/"<<(i->getALAP()-i->getASAP()+1);
+           // cout <<"="<<add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1)<<endl;
+            
+            force+=add/(time-i->getASAP())-minus/(i->getALAP()-i->getASAP()+1);
+            force+=calculate_predecessor_force(time-1,i);
+        }
+    }
+    //cout <<"return for "<<start->getname()<<"\'s child";
+    //cout <<" ="<<force<<endl;
+
+    return force;
+}
 
 double FD_LCS::calculate_successor_force(int time,Node* start){
     double force=0.0;
    // cout <<"call for "<<start->getname()<<"\'s child"<<"time="<<time<<"\n";
     for (auto i:start->getchild()){
-        if(time>=i->getASAP()&&find(calculated.begin(),calculated.end(),i->getname())==calculated.end()){
+        if(time>=i->getASAP()&&find(calculated.begin(),calculated.end(),i->getname())==calculated.end()&&i->getop()!=-1){
             calculated.push_back(i->getname());
             double add=0.0,minus=0.0;
             //cout <<i->getname()<<" ASAP"<<i->getASAP()<<" ALAP"<<i->getALAP()<<endl;
-            for(int j=time;j<=i->getALAP();j++){
+            for(int j=i->getASAP();j<=i->getALAP();j++){
                 minus+=constant[i->getop()][j];
                 //cout<<constant[i->getop()][j]<<endl;
                 if(j>time){
@@ -259,8 +293,7 @@ double FD_LCS::calculate_successor_force(int time,Node* start){
            // cout <<"="<<add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1)<<endl;
             
             force+=add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1);
-            vector<string>a;
-            //force+=calculate_successor_force(time+1,i);
+            force+=calculate_successor_force(time+1,i);
         }
     }
     //cout <<"return for "<<start->getname()<<"\'s child";

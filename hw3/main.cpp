@@ -72,6 +72,8 @@ int main(int argc, char *argv[]){
             //build graph
             string exp="";
             while(infile>>token){
+                //cout<<token<<endl;
+
                 if(token.find(".names")!=-1 || token==".end")
                     break;
                 if (exp!=""){
@@ -81,6 +83,7 @@ int main(int argc, char *argv[]){
                 string table=token;
                 infile>>token;
                 string output=token;//unuse
+
                 for (int i=0;i<table.size();i++){
                     if(table[i]=='1'){
                         exp+=" "+variables[i];
@@ -93,7 +96,9 @@ int main(int argc, char *argv[]){
                     }
                 }
             }
+
             //outfile <<*variables.rbegin()<<" ="<<exp<<endl;
+
         }
 	}
     infile.close();
@@ -133,9 +138,11 @@ int main(int argc, char *argv[]){
         }
         q.pop();
     }
+ 
     for (auto i:list){
         i.second->setALAP(stoi(string(argv[2]))-i.second->getALAP());
     }
+
     q.push(start);
     while(!q.empty()){
         for(int i=0;i<q.front()->getchild().size();i++){
@@ -152,6 +159,7 @@ int main(int argc, char *argv[]){
     int L=stoi(string(argv[2]));
     FD_LCS fd_lcs(start,list,L);
     fd_lcs.checkfeasible();
+
     fd_lcs.run();
     //travesal(start);
 
