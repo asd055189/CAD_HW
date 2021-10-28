@@ -230,11 +230,11 @@ void FD_LCS::calculate_force(Node * n){
         }
         
         /*
-        cout <<"ASAP"<<n->getASAP()<<" ALAP"<<n->getALAP()<<endl;
+        //cout <<"ASAP"<<n->getASAP()<<" ALAP"<<n->getALAP()<<endl;
         for(int a=0;a<total_force.size();a++){
             cout <<SF[a]<<"+"<<PS_F[a]<<"="<<total_force[a]<<"\n";
         }
-        cout<< n->getname()<<" can be place at"<<n->get_suit_to_be_place()<<endl;
+        //cout<< n->getname()<<" can be place at"<<n->get_suit_to_be_place()<<endl;
         */
 }
 
@@ -255,12 +255,12 @@ double FD_LCS::calculate_successor_force(int time,Node* start){
                     //cout<<"---"<<constant[i->getop()][j]<<endl;
                 }
             }
-            //cout <<i->getname()<<" "<<add<<"/"<<(i->getALAP()-time)<<"-"<<minus<<"/"<<(i->getALAP()-i->getASAP()+1);
-            //cout <<"="<<add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1)<<endl;
+           // cout <<i->getname()<<" "<<add<<"/"<<(i->getALAP()-time)<<"-"<<minus<<"/"<<(i->getALAP()-i->getASAP()+1);
+           // cout <<"="<<add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1)<<endl;
             
             force+=add/(i->getALAP()-time)-minus/(i->getALAP()-i->getASAP()+1);
             vector<string>a;
-            force+=calculate_successor_force(time+1,i);
+            //force+=calculate_successor_force(time+1,i);
         }
     }
     //cout <<"return for "<<start->getname()<<"\'s child";
