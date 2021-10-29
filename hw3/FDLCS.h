@@ -59,6 +59,7 @@ void FD_LCS::run(){
         if(i.second->getALAP()-i.second->getASAP()<min_slack && i.second->getop()!=-1){
             min_slack=i.second->getALAP()-i.second->getASAP();
             select=i.second;
+            
         }
     }
     while(select!=nullptr){
@@ -66,14 +67,30 @@ void FD_LCS::run(){
         list[select->getname()]->setstate(1);
         select->setALAP(select->get_suit_to_be_place());
         select->setASAP(select->get_suit_to_be_place());
-        for (auto i:select->getchild()){
-            if(i->getASAP()<=select->get_suit_to_be_place())
-                i->setASAP(select->get_suit_to_be_place()+1);//set the child ASAP;
+        
+
+        queue<Node *>q;
+        q.push(select);
+        while(!q.empty()){
+            for(auto i:q.front()->getchild()){
+                if(i->getASAP()<=select->getASAP()){
+                    i->setASAP(select->getASAP()+1);//set the child ASAP;
+                    q.push(i);
+                }
+            }
+            q.pop();
         }
-         for (auto i:select->getparent()){
-            if(i->getALAP()>=select->get_suit_to_be_place())
-                i->setALAP(select->get_suit_to_be_place()-1);//set the parent ALAP;
+        q.push(select);
+        while(!q.empty()){
+            for(auto i:q.front()->getparent()){
+                if(i->getALAP()>=select->getALAP()){
+                    i->setALAP(select->getALAP()-1);//set the child ASAP;
+                    q.push(i);
+                }
+            }
+            q.pop();
         }
+
         output[select->get_suit_to_be_place()-1][select->getop()].push_back(select->getname());
         select=nullptr;
         min_slack=INT_MAX;
