@@ -373,9 +373,10 @@ int main(int argc, char **argv)
 	PLA->F = cv_intersect(PLA->F, PLA1->F);
 	break;
 
-    case KEY_union:				/* cover union */
+    case KEY_union:{	/* cover union */
 	PLA->F = sf_union(PLA->F, PLA1->F);
 	break;
+	}
 
     case KEY_disjoint:				/* make cover disjoint */
 	PLA->F = make_disjoint(PLA->F);

@@ -40,12 +40,12 @@ pkgincludedir = $(includedir)/espresso-ab
 
 top_builddir = ..
 
-ACLOCAL = aclocal
-AUTOCONF = autoconf
-AUTOMAKE = automake
-AUTOHEADER = autoheader
+ACLOCAL = /Users/tpy/Desktop/CAD/CAD_HW/hw4/espresso-ab-1.0/missing aclocal
+AUTOCONF = /Users/tpy/Desktop/CAD/CAD_HW/hw4/espresso-ab-1.0/missing autoconf
+AUTOMAKE = /Users/tpy/Desktop/CAD/CAD_HW/hw4/espresso-ab-1.0/missing automake
+AUTOHEADER = /Users/tpy/Desktop/CAD/CAD_HW/hw4/espresso-ab-1.0/missing autoheader
 
-INSTALL = /usr/local/bin/ginstall -c
+INSTALL = /usr/bin/install -c
 INSTALL_PROGRAM = ${INSTALL} $(AM_INSTALL_PROGRAM_FLAGS)
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_SCRIPT = ${INSTALL}
