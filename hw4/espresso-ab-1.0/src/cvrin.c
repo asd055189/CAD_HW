@@ -34,7 +34,7 @@ char *get_word(register FILE *fp, register char *word)
 /*
  *  Yes, I know this routine is a mess
  */
-void read_cube(register FILE *fp, pPLA PLA)
+void read_cube(register FILE *fp, pPLA PLA,int function_num)
 {
     register int var, i;
     pcube cf = cube.temp[0], cr = cube.temp[1], cd = cube.temp[2];
@@ -145,36 +145,44 @@ void read_cube(register FILE *fp, pPLA PLA)
     } else
 	set_copy(cr, cf);
     set_copy(cd, cf);
-    for(i = cube.first_part[var]; i <= cube.last_part[var]; i++)
-	switch (getc(fp)) {
-	    case EOF:
-		goto bad_char;
-	    case '\n':
-		if (! line_length_error)
-		    fprintf(stderr, "product term(s) %s\n",
-			"span more than one line (warning only)");
-		line_length_error = TRUE;
-		lineno++;
-		i--;
-		break;
-	    case ' ': case '|': case '\t':
-		i--;
-		break;
-	    case '4': case '1':
-		if (PLA->pla_type & F_type)
-		    set_insert(cf, i), savef = TRUE;
-		break;
-	    case '3': case '0':
-		if (PLA->pla_type & R_type)
-		    set_insert(cr, i), saver = TRUE;
-		break;
-	    case '2': case '-':
-		if (PLA->pla_type & D_type)
-		    set_insert(cd, i), saved = TRUE;
-	    case '~':
-		break;
-	    default:
-		goto bad_char;
+    for(i = cube.first_part[var]; i <= cube.last_part[var]; i++){
+		switch (getc(fp)) {
+			case EOF:
+			goto bad_char;
+			case '\n':
+			if (! line_length_error)
+				fprintf(stderr, "product term(s) %s\n",
+				"span more than one line (warning only)");
+			line_length_error = TRUE;
+			lineno++;
+			i--;
+			break;
+			case ' ': case '|': case '\t':
+			i--;
+			break;
+			case '4': case '1':
+			//printf("%d",cube.first_part[var]+function_num-1);
+			if (i!=cube.first_part[var]+function_num-1)
+				break;
+			if (PLA->pla_type & F_type)
+				set_insert(cf, i), savef = TRUE;
+			break;
+			case '3': case '0':
+			if (i!=cube.first_part[var]+function_num-1)
+				break;
+			if (PLA->pla_type & R_type)
+				set_insert(cr, i), saver = TRUE;
+			break;
+			case '2': case '-':
+			if (i!=cube.first_part[var]+function_num-1)
+				break;
+			if (PLA->pla_type & D_type)
+				set_insert(cd, i), saved = TRUE;
+			case '~':
+			break;
+			default:
+			goto bad_char;
+		}
 	}
     if (savef) PLA->F = sf_addset(PLA->F, cf);
     if (saved) PLA->D = sf_addset(PLA->D, cd);
@@ -186,7 +194,7 @@ bad_char:
     skip_line(fp, stdout, TRUE);
     return;
 }
-void parse_pla(FILE *fp, pPLA PLA)
+void parse_pla(FILE *fp, pPLA PLA,int function_num)
 {
     int i, var, ch, np, last;
     char word[256];
@@ -197,6 +205,7 @@ void parse_pla(FILE *fp, pPLA PLA)
 loop:
     switch(ch = getc(fp)) {
 	case EOF:
+		printf("-----------\n");
 	    return;
 
 	case '\n':
@@ -214,7 +223,7 @@ loop:
 	    /* .i gives the cube input size (binary-functions only) */
 	    if (equal(get_word(fp, word), "i")) {
 		if (cube.fullset != NULL) {
-		    fprintf(stderr, "extra .i ignored\n");
+		    //fprintf(stderr, "extra .i ignored\n");
 		    skip_line(fp, stdout, /* echo */ FALSE);
 		} else {
 		    if (fscanf(fp, "%d", &cube.num_binary_vars) != 1)
@@ -226,7 +235,7 @@ loop:
 	    /* .o gives the cube output size (binary-functions only) */
 	    } else if (equal(word, "o")) {
 		if (cube.fullset != NULL) {
-		    fprintf(stderr, "extra .o ignored\n");
+		    //fprintf(stderr, "extra .o ignored\n");
 		    skip_line(fp, stdout, /* echo */ FALSE);
 		} else {
 		    if (cube.part_size == NULL)
@@ -420,7 +429,7 @@ fatal("num_binary_vars (second field of .mv) cannot be negative");
 		PLA->D = new_cover(10);
 		PLA->R = new_cover(10);
 	    }
-	    read_cube(fp, PLA);
+	    read_cube(fp, PLA,function_num);
     }
     goto loop;
 }
@@ -461,7 +470,7 @@ fatal("num_binary_vars (second field of .mv) cannot be negative");
 	> 0	 : Operation successful
 */
 
-int read_pla(FILE *fp, int needs_dcset, int needs_offset, int pla_type, pPLA *PLA_return)
+int read_pla(FILE *fp, int needs_dcset, int needs_offset, int pla_type, pPLA *PLA_return,int function_num)
 {
     pPLA PLA;
     int i, second, third;
@@ -474,7 +483,33 @@ int read_pla(FILE *fp, int needs_dcset, int needs_offset, int pla_type, pPLA *PL
 
     /* Read the pla */
     time = ptime();
-    parse_pla(fp, PLA);
+	//cube.first_part[cube.num_binary_vars]=cube.num_binary_vars*2;
+	//cube.last_part[cube.num_binary_vars]=cube.first_part[cube.num_binary_vars]+function_num-1;
+
+    parse_pla(fp, PLA,function_num);
+	//printf("%d\n\n\n",cube.num_binary_vars);
+	//printf("%d\n\n\n",cube.num_vars);
+	//printf("%d\n\n\n",cube.num_mv_vars);
+	//printf("%d\n\n\n",cube.inword);
+	//printf("%d\n\n\n",cube.output);
+	//index=cube.num_binary_vars
+	//start=cube.num_binary_vars*2
+	//end=cube.num_binary_vars*2+cube.num_mv_vars
+	//printf("%d\n\n\n",cube.num_binary_vars*2);
+	//cube.first_part[cube.num_binary_vars]=cube.num_binary_vars*2;
+	//printf("%d\n",cube.num_binary_vars*2);
+	//printf("%d\n\n\n",cube.num_binary_vars*2+cube.output-1);
+	//printf("%d\n\n\n",cube.first_part[cube.num_binary_vars]);
+	//printf("%d\n\n\n",cube.last_part[cube.num_binary_vars]);
+	//cube.last_part[cube.num_binary_vars]=cube.first_part[cube.num_binary_vars]+=function_num-1;
+
+	//printf("%d\n\n\n",cube.first_part[cube.num_binary_vars]);
+	//printf("%d\n\n\n",cube.last_part[cube.num_binary_vars]);
+	//cube.first_part[cube.num_binary_vars]+=function_num-1;
+	//cube.first_part[4]+=0;
+	//cube.last_part[4]+=0;
+
+
 
     /* Check for nothing on the file -- implies reached EOF */
     if (PLA->F == NULL) {

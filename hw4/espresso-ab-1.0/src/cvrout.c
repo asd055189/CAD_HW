@@ -86,7 +86,7 @@ void fpr_header(FILE *fp, pPLA PLA, int output_type)
     if (cube.num_mv_vars <= 1) {
 	fprintf(fp, ".i %d\n", cube.num_binary_vars);
 	if (cube.output != -1)
-	    fprintf(fp, ".o %d\n", cube.part_size[cube.output]);
+	    fprintf(fp, ".o %d\n", 1);
     } else {
 	fprintf(fp, ".mv %d %d", cube.num_vars, cube.num_binary_vars);
 	for(var = cube.num_binary_vars; var < cube.num_vars; var++)

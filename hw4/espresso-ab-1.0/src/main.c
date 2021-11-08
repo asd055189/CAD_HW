@@ -20,7 +20,7 @@
 static FILE *last_fp;
 static int input_type = FD_type;
 
-void getPLA(int opt, int argc, char **argv, int option, pPLA *PLA, int out_type);
+void getPLA(int opt, int argc, char **argv, int option, pPLA *PLA, int out_type,int function_num,char* filename);
 void delete_arg(int *argc, register char **argv, int num);
 void init_runtime(void);
 void backward_compatibility_hack(int *argc, char **argv, int *option, int *out_type);
@@ -31,8 +31,8 @@ bool check_arg(int *argc, register char **argv, register char *s);
 int main(int argc, char **argv)
 {
     int i, j, first, last, strategy, out_type, option;
-    pPLA PLA, PLA1;
-    pcover F, Fold, Dold;
+    pPLA PLA, PLA1,PLA3,PLA4,PLA5;
+    pcover F, Fold, Dold,Fold1;
     pset last1, p;
     cost_t cost;
     bool error, exact_cover;
@@ -72,8 +72,77 @@ int main(int argc, char **argv)
     exact_cover = FALSE;	/* for -qm option, the default */
 
     backward_compatibility_hack(&argc, argv, &option, &out_type);
+	int function_num1=atoi(argv[2]);
+	int function_num2=atoi(argv[3]);
+	FILE *fp1,*fp2,*fp3,*fp4,*fp5;
+	fp1=fopen("a.pla", "w");
+	fp2=fopen("b.pla", "w");
+	fp3=fopen("and.pla", "w");
+	fp4=fopen("or.pla", "w");
+	fp5=fopen("xor.pla", "w");
+
+	//printf("%d\n",function_num2);
+	getPLA(1, argc, argv, option, &PLA, out_type,function_num1,"");
+	PLA->F = minimize_exact(PLA->F, PLA->D, PLA->R,1);
+	//PLA->F = espresso(PLA->F, PLA->D, PLA->R);
+
+	int tmp1=cube.last_part[cube.num_binary_vars];
+	int tmp2=cube.first_part[cube.num_binary_vars];
+
+	cube.last_part[cube.num_binary_vars]=cube.first_part[cube.num_binary_vars]+=function_num1-1;
+	EXECUTE(fprint_pla(fp1, PLA, out_type), WRITE_TIME, PLA->F, cost);
+	fclose(fp1);
+
+	cube.last_part[cube.num_binary_vars]=tmp1;
+	cube.first_part[cube.num_binary_vars]=tmp2;
 
 
+	getPLA(1, argc, argv, option, &PLA1, out_type,function_num2,"");
+	PLA1->F = minimize_exact(PLA1->F, PLA1->D, PLA1->R,1);
+
+	cube.last_part[cube.num_binary_vars]=cube.first_part[cube.num_binary_vars]+=function_num2-1;
+
+	EXECUTE(fprint_pla(fp2, PLA1, out_type), WRITE_TIME, PLA1->F, cost);
+	fclose(fp2);
+	//cube.last_part[cube.num_binary_vars]=tmp1;
+	cube.last_part[cube.num_binary_vars]=cube.first_part[cube.num_binary_vars]=tmp2;
+
+	getPLA(1, argc, argv, option, &PLA3, out_type,1,"a.pla");
+	getPLA(1, argc, argv, option, &PLA4, out_type,1,"b.pla");
+
+	/*and*/
+	PLA3->F = cv_intersect(PLA3->F, PLA4->F);
+	PLA3->F = minimize_exact(PLA3->F, PLA3->D, PLA3->R,1);
+	EXECUTE(fprint_pla(fp3, PLA3, out_type), WRITE_TIME, PLA3->F, cost);
+	
+	/*or*/
+	getPLA(1, argc, argv, option, &PLA3, out_type,1,"a.pla");
+	getPLA(1, argc, argv, option, &PLA4, out_type,1,"b.pla");
+
+	PLA3->F = sf_union(PLA3->F, PLA4->F);
+	PLA3->F = minimize_exact(PLA3->F, PLA3->D, PLA3->R,1);
+	EXECUTE(fprint_pla(fp4, PLA3, out_type), WRITE_TIME, PLA3->F, cost);
+	
+	/*xor*/
+	getPLA(1, argc, argv, option, &PLA3, out_type,1,"a.pla");
+	getPLA(1, argc, argv, option, &PLA4, out_type,1,"b.pla");
+	pcover T1 = cv_intersect(PLA3->F, PLA4->R);
+	pcover T2 = cv_intersect(PLA4->F, PLA3->R);
+	free_cover(PLA3->F);
+	PLA3->F = sf_contain(sf_join(T1, T2));
+	free_cover(T1);
+	free_cover(T2);
+	PLA3->F = minimize_exact(PLA3->F, PLA3->D, PLA3->R,1);
+	EXECUTE(fprint_pla(fp5, PLA3, out_type), WRITE_TIME, PLA3->F, cost);
+	
+
+
+
+
+	//EXECUTE(fprint_pla(stdout, PLA1, out_type), WRITE_TIME, PLA1->F, cost);
+	
+	//PLA_summary(PLA);
+	return 0;
     /* parse command line options*/
     while ((i = getopt(argc, argv, "D:S:de:o:r:stv:x")) != EOF) {
 	switch(i) {
@@ -186,12 +255,12 @@ int main(int argc, char **argv)
     switch(option_table[option].num_plas) {
 	case 2:
 	    if (optind+2 < argc) fatal("trailing arguments on command line");
-	    getPLA(optind++, argc, argv, option, &PLA, out_type);
-	    getPLA(optind++, argc, argv, option, &PLA1, out_type);
+	    getPLA(optind++, argc, argv, option, &PLA, out_type,0,"");
+	    getPLA(optind++, argc, argv, option, &PLA1, out_type,0,"");
 	    break;
 	case 1:
 	    if (optind+1 < argc) fatal("trailing arguments on command line");
-	    getPLA(optind++, argc, argv, option, &PLA, out_type);
+	    getPLA(optind++, argc, argv, option, &PLA, out_type,0,"");
 	    break;
     }
     if (optind < argc) fatal("trailing arguments on command line");
@@ -235,7 +304,7 @@ int main(int argc, char **argv)
 	    free_PLA(PLA);
 	    setdown_cube();
 	    FREE(cube.part_size);
-	} while (read_pla(last_fp, TRUE, TRUE, pla_type, &PLA) != EOF);
+	} while (read_pla(last_fp, TRUE, TRUE, pla_type, &PLA,0) != EOF);
 	exit(0);
     }
 
@@ -537,12 +606,12 @@ int main(int argc, char **argv)
 }
 
 
-void getPLA(int opt, int argc, char **argv, int option, pPLA *PLA, int out_type)
+void getPLA(int opt, int argc, char **argv, int option, pPLA *PLA, int out_type,int function_num,char* filename)
 {
     FILE *fp;
     int needs_dcset, needs_offset;
     char *fname;
-
+	
     if (opt >= argc) {
 	fp = stdin;
 	fname = "(stdin)";
@@ -562,11 +631,17 @@ void getPLA(int opt, int argc, char **argv, int option, pPLA *PLA, int out_type)
 	needs_dcset = option_table[option].needs_dcset;
 	needs_offset = option_table[option].needs_offset;
     }
-
-    if (read_pla(fp, needs_dcset, needs_offset, input_type, PLA) == EOF) {
-	fprintf(stderr, "%s: Unable to find PLA on file %s\n", argv[0], fname);
+	if(strcmp(filename,"")!=0){
+		if ((fp = fopen(filename, "r")) == NULL) {
+	    	fprintf(stderr, ": Unable to open %s\n", filename);
+	    	exit(1);
+		}
+	}
+    if (read_pla(fp, needs_dcset, needs_offset, input_type, PLA,function_num) == EOF) {
+	fprintf(stderr, "%s: Unable to find PLA on file %s\n", argv[0], filename);
 	exit(1);
     }
+	
     (*PLA)->filename = strdup(fname);
     filename = (*PLA)->filename;
 /*    (void) fclose(fp);*/
