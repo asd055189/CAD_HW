@@ -23,8 +23,8 @@ pair<long long int,long long int> get_bound(map<string,Macro>nodelist){
     return make_pair(width,height);
 }
 
-void draw_image(map<string,Macro>nodelist,vector<string>polishexp){
-    ofstream outfile("result.gp",std::ifstream::out);
+void draw_image(map<string,Macro>nodelist,vector<string>polishexp,string filename){
+    ofstream outfile(filename+".gp",std::ifstream::out);
     int _ID=1;
     if(!outfile.is_open()){
         cout <<"out file error\n";
@@ -50,9 +50,9 @@ void draw_image(map<string,Macro>nodelist,vector<string>polishexp){
     outfile<<"set grid  \n";
     outfile<<"plot [0:"<<max(height,width)<<"][0:"<<max(height,width)<<"] 0\n";//max(width,height)
     outfile<<"set terminal png size 1024,768\n";
-    outfile<<"set output \"result.png\"\n";
+    outfile<<"set output \""<<filename<<".png\"\n";
     outfile<<"replot\n";
-    outfile<<"set terminal qt persist size 1024,768\n";//linux=x11 macos=qt
+    outfile<<"set terminal x11 persist size 1024,768\n";//linux=x11 macos=qt
     outfile<<"replot\n";
 }
 
@@ -154,12 +154,21 @@ void calc_position(map<string,Macro>&nodelist,vector<string>polishexp){
 
 }
 void print_exp(vector<string>polishexp){
-    for(auto i:polishexp){
+    for(auto i:polishexp)
         cout<<i<<" ";
-    }
-
     cout <<endl;
-    
+}
+void fprint_exp(vector<string>polishexp,string filename){
+    ofstream outfile(filename+".polish",std::ifstream::out);
+    for(auto i:polishexp)
+        outfile<<i<<" ";
+    outfile <<endl;
+}
+void fprint_position(map<string,Macro>nodelist,string filename){
+    ofstream outfile(filename+".pl",std::ifstream::out);
+    for(auto i:nodelist)
+        outfile<<i.first<<" "<<i.second.position_x<<" "<<i.second.position_y<<endl;
+    outfile <<endl;
 }
 void simulated_annealing(map<string,Macro>nodelist,vector<string>&polishexp){
     vector<string>*answer=&polishexp;
@@ -170,24 +179,26 @@ void simulated_annealing(map<string,Macro>nodelist,vector<string>&polishexp){
     double reject=0;
     double MT=0;
     double T=3000;
-
+    clock_t start=clock();
     long long int cost=get_bound(nodelist).first*get_bound(nodelist).second;
     long long int best_cost=cost;
     vector<string>best_exp=polishexp;
-    
+
     while(T>1 || (reject/MT)>0.95){
         long long int new_cost;
         for(int i=0;i<7*nodelist.size();i++){
-            //print_exp(S_exp);
+            clock_t cur=clock();
+            if((cur-start)/CLOCKS_PER_SEC>7000){
+                cout <<cur<<endl;
+                cout <<start<<endl;
+                cout<<"time up!"<<endl;
+                polishexp=best_exp;
+                return;
+            }
             map<string,Macro>S_b_list=S_list;
             vector<string>S_b_exp=S_exp;
-            //M1 (Operand Swap): Swap two adjacent operands.
-            //M2 (Chain Invert): Complement some chain (V = H, H = V).
-            //M3 (Operator/Operand Swap): Swap two adjacent operand
             int r=rand()%100;
             if(r<10){
-                //cout <<"==========op : M1=========="<<endl;
-                //print_exp(S_b_exp);
 
                 int s1=rand()%S_b_exp.size();
                 while(S_b_exp[s1]=="V"||S_b_exp[s1]=="H")
@@ -196,23 +207,12 @@ void simulated_annealing(map<string,Macro>nodelist,vector<string>&polishexp){
                 int s2=rand()%S_b_exp.size();
                 while((S_b_exp[s2]=="V"||S_b_exp[s2]=="H")||s1==s2)
                     s2=rand()%S_b_exp.size();
-
-                
-                //cout <<S_b_exp[s1]<<" "<<S_b_exp[s2]<<endl;
                 swap(S_b_exp[s1],S_b_exp[s2]); 
-                //print_exp(S_b_exp);
-
             }
             else if (r<80){
-                //cout <<"==========op : M2=========="<<endl;
-                //print_exp(S_b_exp);
                 int s=rand()%S_b_exp.size();
                 while(S_b_exp[s]!="V"&&S_b_exp[s]!="H")
                     s=rand()%S_b_exp.size();
-
-
-                //cout <<S_b_exp[s]<<endl;
-                //cout <<s<<endl;
                 for(int it=s;it<S_b_exp.size();it++){
                     if(S_b_exp[it]!="V"&&S_b_exp[it]!="H")
                         break;
@@ -230,14 +230,8 @@ void simulated_annealing(map<string,Macro>nodelist,vector<string>&polishexp){
                     else if(S_b_exp[it]=="H")
                         S_b_exp[it]="V";
                 }
-               // print_exp(S_b_exp);
-
             }
             else if(r<100){
-                //cout <<"==========op : M3=========="<<endl;
-                //print_exp(S_b_exp);
-                //int n=rand()%(S_b_exp.size()-1);
-                //print_exp(S_b_exp);
                 int rej=0;
                 int n; 
                 bool done=false;
@@ -248,25 +242,19 @@ void simulated_annealing(map<string,Macro>nodelist,vector<string>&polishexp){
                             done=true;
                     rej++;
                 }
-                //cout <<"rej"<<rej<<endl;
                 if(done){
-                    //cout <<S_b_exp[n]<< " "<<S_b_exp[n+1]<<endl;
                     swap(S_b_exp[n],S_b_exp[n+1]); 
-                    //print_exp(S_b_exp);
                 }
             }
             calc_position(S_b_list,S_b_exp);
             new_cost=get_bound(S_b_list).first*get_bound(S_b_list).second;
-            //cout <<"cost"<<cost<<endl;
-            //cout <<"newcost"<<new_cost<<endl;
                 if(new_cost-best_cost<0){
-                    cout<<"\n=====cost down=====\n";
-                    cout<<best_cost<<"->"<<new_cost<<endl;
+                    //cout<<"\n=====cost down=====\n";
+                    //cout<<best_cost<<"->"<<new_cost<<endl;
                     best_cost=new_cost;
                     best_exp=S_b_exp;
                 }
             if((new_cost-cost)<=0){
-                
                 S_list=S_b_list;
                 S_exp=S_b_exp;
                 cost=new_cost;
@@ -274,9 +262,9 @@ void simulated_annealing(map<string,Macro>nodelist,vector<string>&polishexp){
             else if((new_cost-cost)>0){
                 double x = (double) rand() / (RAND_MAX + 1.0);
                 if(x<=exp((0-(new_cost-cost))/T)){
-                    cout <<"x="<<x<<endl;
-                    cout <<"accept prob="<<pow(2.71828,(new_cost-cost)/(-T))<<endl;
-                    cout<<"cost up "<<cost<<"->"<<new_cost<<endl;
+                    //cout <<"x="<<x<<endl;
+                    //cout <<"accept prob="<<pow(2.71828,(new_cost-cost)/(-T))<<endl;
+                    //cout<<"cost up "<<cost<<"->"<<new_cost<<endl;
                     S_list=S_b_list;
                     S_exp=S_b_exp;
                     cost=new_cost;
@@ -285,19 +273,16 @@ void simulated_annealing(map<string,Macro>nodelist,vector<string>&polishexp){
             else{
                 reject++;
             }
-            //cout <<i<<endl;
         }
         T=0.85*T;
-        cout <<T<<endl;
+        //cout <<T<<endl;
     }
-    cout <<"ANS:\n\n";
+    //cout <<"ANS:\n\n";
     
-    print_exp(S_exp);
+    //print_exp(S_exp);
 
     polishexp=best_exp;
-
 }
-
 
 int main(int argc, char *argv[]){
     map<string,Macro>nodelist;
@@ -306,6 +291,12 @@ int main(int argc, char *argv[]){
         cout <<"in file error\n";
         exit(0);
     }
+    string filename=argv[1];
+    filename=filename.substr(filename.find("benchmark/")+1,filename.find(".nodes")-filename.find("benchmark/")-1);
+    filename=filename.substr(filename.find("/")+1,filename.size());
+
+
+    cout <<filename<<endl;
     srand(time(NULL));
     string tok;
     while(infile>>tok){
@@ -328,52 +319,25 @@ int main(int argc, char *argv[]){
             i++;
             init_polishexp.push_back(i->first);
         }
-        int r=rand()%10;
-        if(r<5)
+        int r=rand()%100;
+        if(r<50)
             init_polishexp.push_back("H");
         else
             init_polishexp.push_back("V");
 
     }
 
-    /*
-    cout<<"==========init=========="<<endl;
-    print_exp(init_polishexp);
-    cout<<"==========init=========="<<endl;
-    */
-
-
     simulated_annealing(nodelist,init_polishexp);
-            /*init_polishexp.clear();
-            //B4 B2 V B5 V B1 H B3 V
-            init_polishexp.push_back("B4");
-            init_polishexp.push_back("B2");
-            init_polishexp.push_back("V");
-            init_polishexp.push_back("B5");
-            init_polishexp.push_back("V");
-            init_polishexp.push_back("B1");
-            init_polishexp.push_back("H");
-            init_polishexp.push_back("B3");
-            init_polishexp.push_back("V");*/
-
-
 
     calc_position(nodelist,init_polishexp);
-    print_exp(init_polishexp);
+    fprint_exp(init_polishexp,filename);
+    fprint_position(nodelist,filename);
+    cout <<filename<<endl;
+    draw_image(nodelist,init_polishexp,filename);
 
-    //cout <<init_polishexp.size()<<endl ;
-    draw_image(nodelist,init_polishexp);
-
-    /* for(auto i:nodelist){
-        cout <<i.second.position_x<<",";
-        cout <<i.second.position_y<<" ";
-        cout <<i.second.width<<",";
-        cout <<i.second.height<<endl;
-    } */
-    int width=get_bound(nodelist).first;
-    int height=get_bound(nodelist).second;
+    long long int width=get_bound(nodelist).first;
+    long long int height=get_bound(nodelist).second;
     cout <<"width"<<width<<endl;
     cout <<"height"<<height<<endl;
     cout<<"cost = "<<width*height<<endl;
-
 }
